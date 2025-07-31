@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            min-height: 100vh;
+        }
+        .cell {
+            transition: all 0.2s ease;
+        }
+        .cell:hover:not(.marked) {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .x-mark {
+            color: #ef4444;
+        }
+        .o-mark {
+            color: #3b82f6;
+        }
+        .winning-cell {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Jogo da Velha</h1>
+        
+        <div class="mb-4 flex justify-between items-center">
+            <div class="text-lg font-medium">
+                <span class="x-mark font-bold">X</span> vs <span class="o-mark font-bold">O</span>
+            </div>
+            <div id="status" class="text-lg font-medium text-gray-700">
+                Vez de: <span id="current-player" class="x-mark font-bold">X</span>
+            </div>
+        </div>
+        
+        <div id="board" class="grid grid-cols-3 gap-2 mb-6">
+            <!-- Células do jogo serão geradas pelo JavaScript -->
+        </div>
+        
+        <div class="flex justify-between">
+            <div class="text-lg">
+                Placar: <span id="score-x" class="x-mark font-bold">0</span> - <span id="score-o" class="o-mark font-bold">0</span>
+            </div>
+            <button id="reset" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                Novo Jogo
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const board = document.getElementById('board');
+            const status = document.getElementById('status');
+            const currentPlayerDisplay = document.getElementById('current-player');
+            const resetButton = document.getElementById('reset');
+            const scoreX = document.getElementById('score-x');
+            const scoreO = document.getElementById('score-o');
+            
+            let currentPlayer = 'X';
+            let gameBoard = ['', '', '', '', '', '', '', '', ''];
+            let gameActive = true;
+            let scores = { X: 0, O: 0 };
+            
+            // Criar o tabuleiro
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add(
+                    'cell', 
+                    'h-24', 
+                    'flex', 
+                    'items-center', 
+                    'justify-center', 
+                    'text-4xl', 
+                    'font-bold', 
+                    'bg-gray-100', 
+                    'rounded-lg',
+                    'cursor-pointer'
+                );
+                cell.dataset.index = i;
+                board.appendChild(cell);
+                
+                cell.addEventListener('click', () => handleCellClick(cell, i));
+            }
+            
+            // Lidar com clique na célula
+            function handleCellClick(cell, index) {
+                if (gameBoard[index] !== '' || !gameActive) return;
+                
+                gameBoard[index] = currentPlayer;
+                cell.textContent = currentPlayer;
+                cell.classList.add('marked');
+                cell.classList.add(currentPlayer === 'X' ? 'x-mark' : 'o-mark');
+                
+                if (checkWin()) {
+                    status.textContent = `Jogador ${currentPlayer} venceu!`;
+                    gameActive = false;
+                    scores[currentPlayer]++;
+                    updateScore();
+                    highlightWinningCells();
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    status.textContent = 'Empate!';
+                    gameActive = false;
+                    return;
+                }
+                
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                currentPlayerDisplay.textContent = currentPlayer;
+                currentPlayerDisplay.className = currentPlayer === 'X' ? 'x-mark font-bold' : 'o-mark font-bold';
+            }
+            
+            // Verificar vitória
+            function checkWin() {
+                const winPatterns = [
+                    [0, 1, 2], [3, 4, 5], [6, 7, 8], // Linhas
+                    [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colunas
+                    [0, 4, 8], [2, 4, 6]             // Diagonais
+                ];
+                
+                for (const pattern of winPatterns) {
+                    const [a, b, c] = pattern;
+                    if (gameBoard[a] && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c]) {
+                        return pattern;
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Destacar células vencedoras
+            function highlightWinningCells() {
+                const winningPattern = checkWin();
+                if (winningPattern) {
+                    winningPattern.forEach(index => {
+                        const cell = board.children[index];
+                        cell.classList.add('winning-cell', 'bg-gray-200');
+                    });
+                }
+            }
+            
+            // Verificar empate
+            function checkDraw() {
+                return !gameBoard.includes('');
+            }
+            
+            // Atualizar placar
+            function updateScore() {
+                scoreX.textContent = scores.X;
+                scoreO.textContent = scores.O;
+            }
+            
+            // Reiniciar jogo
+            function resetGame() {
+                gameBoard = ['', '', '', '', '', '', '', '', ''];
+                gameActive = true;
+                currentPlayer = 'X';
+                
+                // Limpar tabuleiro
+                Array.from(board.children).forEach(cell => {
+                    cell.textContent = '';
+                    cell.classList.remove('marked', 'x-mark', 'o-mark', 'winning-cell', 'bg-gray-200');
+                });
+                
+                // Atualizar status
+                status.textContent = 'Vez de:';
+                currentPlayerDisplay.textContent = 'X';
+                currentPlayerDisplay.className = 'x-mark font-bold';
+            }
+            
+            resetButton.addEventListener('click', resetGame);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'967cf679651ea4dd',t:'MTc1Mzk2MzUxNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+
+
+
